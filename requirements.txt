@@ -1,0 +1,12 @@
+streamlit
+langchain
+langgraph
+groq 
+pandas
+numpy 
+plotly 
+faiss-cpu
+chromadb
+pydantic
+pytest
+langsmith
