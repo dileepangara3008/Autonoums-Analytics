@@ -1,33 +1,44 @@
-from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field
+from typing import Any, List, Dict, Optional
+
 
 class AgentState(BaseModel):
-    # Data
-    dataset: Any = None
-    cleaned_data: Any = None
-    
-    # Analysis
-    summary_stats: Dict = {}
-    eda_results: Dict = {}
-    statistical_results: Dict = {}
-    
-    # Outputs
-    charts: List = []
-    insights: str = ""
-    
-    # RAG
-    query: str = ""
-    query_type: str = ""
-    retrieved_docs: List = []
-    final_response: str = ""
-    
-    # Control
-    current_stage: str = ""
+
+    # -----------------------------
+    # 📂 INPUT
+    # -----------------------------
+    file: Optional[Any] = None
+    query: Optional[str] = None
+
+    # -----------------------------
+    # 📊 DATA
+    # -----------------------------
+    dataset: Optional[Any] = None
+    cleaned_data: Optional[Any] = None
+
+    # -----------------------------
+    # 📈 RESULTS
+    # -----------------------------
+    eda_results: Optional[Dict] = None
+    statistical_results: Optional[Dict] = None
+    charts: List = Field(default_factory=list)
+
+    # 🔥 FIXED HERE
+    insights: Optional[Dict[str, Any]] = None
+
+    # -----------------------------
+    # 🔁 FLOW CONTROL
+    # -----------------------------
+    current_stage: str = "START"
     waiting_for_input: bool = False
-    
-    # HITL
-    hitl_responses: Dict = {}
-    
-    # Debug
-    logs: List = []
-    errors: List = []
+
+    # -----------------------------
+    # 🧠 HITL
+    # -----------------------------
+    hitl_responses: Dict = Field(default_factory=dict)
+
+    # -----------------------------
+    # 🪵 DEBUG
+    # -----------------------------
+    logs: List = Field(default_factory=list)
+    errors: List = Field(default_factory=list)

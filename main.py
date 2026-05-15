@@ -1,0 +1,137 @@
+import os
+import logging
+import warnings
+
+warnings.filterwarnings("ignore")
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+logging.getLogger("transformers").setLevel(logging.ERROR)
+
+import streamlit as st
+import pandas as pd
+from core.state import AgentState
+from agents.ingestion_agent import ingestion_agent
+from graph.builder import build_graph
+
+# -----------------------------
+# 🚀 INIT GRAPH
+# -----------------------------
+graph = build_graph()
+graph.get_graph().draw_mermaid_png(output_file_path="graph.png")
+# -----------------------------
+# 🧠 SESSION STATE
+# -----------------------------
+if "state" not in st.session_state:
+    st.session_state.state = None
+
+# -----------------------------
+# 🎯 UI
+# -----------------------------
+st.set_page_config(page_title="Autonomous Analytics AI", layout="wide")
+st.title("🚀 Autonomous Analytics Platform")
+
+file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
+
+# -----------------------------
+# ▶️ START PIPELINE
+# -----------------------------
+if file and st.sidebar.button("Start Pipeline"):
+    state = AgentState()
+    state.file = file
+
+    # 🔥 CALL INGESTION DIRECTLY (CRITICAL FIX)
+    state = ingestion_agent(state)
+
+    print("AFTER INGESTION:", state.current_stage, state.waiting_for_input)
+
+    st.session_state.state = state
+    st.rerun()
+# -----------------------------
+# 🧠 MAIN STATE
+# -----------------------------
+state = st.session_state.state
+
+if state:
+
+    st.write("### 🧠 Stage:", state.current_stage)
+    st.write("### ⏸ Waiting:", state.waiting_for_input)
+
+    df = state.cleaned_data if state.cleaned_data is not None else state.dataset
+
+    # -----------------------------
+    # 🔴 HITL CHECKPOINT (CLEANING)
+    # -----------------------------
+    if state.waiting_for_input and state.current_stage == "CLEANING":
+
+        st.warning("⚠️ Missing values detected. Choose cleaning strategy.")
+
+        option = st.selectbox("Strategy", ["drop", "fill", "skip"])
+
+        if st.button("Apply Cleaning"):
+
+            from tools.cleaning import cleaning_tool
+
+            if option != "skip":
+                cleaned = cleaning_tool.invoke({
+                    "data": state.dataset.to_json(),
+                    "strategy": option
+                })
+                state.cleaned_data = pd.read_json(cleaned)
+            else:
+                state.cleaned_data = state.dataset
+
+            # 🔥 RESUME PIPELINE
+            state.waiting_for_input = False
+            state.current_stage = "EDA"
+
+            # 🔥 CONTINUE FULL PIPELINE
+            result = graph.invoke(state)
+            state = AgentState(**result) if isinstance(result, dict) else result
+
+            st.session_state.state = state
+            st.rerun()
+
+    # -----------------------------
+    # 📊 OUTPUT
+    # -----------------------------
+    st.divider()
+    st.header("📊 Results")
+
+    if df is not None:
+        st.subheader("Dataset Preview")
+        st.dataframe(df.head())
+
+    if state.eda_results:
+        st.subheader("📊 EDA Results")
+        st.write(state.eda_results)
+
+    if state.statistical_results:
+        st.subheader("📈 Statistical Results")
+        st.write(state.statistical_results)
+
+    if state.charts:
+        st.subheader("📊 Visualizations")
+        for chart in state.charts:
+            if "column" in chart:
+                st.bar_chart(df[chart["column"]])
+
+    if state.insights:
+
+        st.subheader("💡 Key Insights")
+        for i in state.insights.get("key_insights", []):
+            st.write("•", i)
+
+        st.subheader("🔗 Relationships")
+        for i in state.insights.get("relationships", []):
+            st.write("•", i)
+
+        st.subheader("🚨 Anomalies")
+        for i in state.insights.get("anomalies", []):
+            st.write("•", i)
+
+        st.subheader("📌 Recommendations")
+        for i in state.insights.get("recommendations", []):
+            st.write("•", i)
+
+    if state.errors:
+        st.subheader("❌ Errors")
+        st.error(state.errors)
