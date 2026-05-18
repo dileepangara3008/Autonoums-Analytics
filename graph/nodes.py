@@ -94,14 +94,6 @@ def insights_node(state):
     return state
 
 
-# -----------------------------
-# 🧠 PANDAS
-# -----------------------------
-def pandas_node(state):
-    df = state.cleaned_data if state.cleaned_data is not None else state.dataset
-    state.insights = run_pandas_agent(df, state.query)
-    return state
-
 
 # -----------------------------
 # 🔗 NODE MAP
