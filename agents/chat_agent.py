@@ -183,7 +183,9 @@ def run_chat_agent(query, state):
             {query}
             """
 
-            response = agent.run(enhanced_query)
+            result = agent.invoke(enhanced_query)
+
+            response = result.get("output", result)
 
         elif qtype == "viz":
 

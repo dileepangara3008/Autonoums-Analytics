@@ -1,6 +1,7 @@
 import os
 import logging
 import warnings
+import io
 
 warnings.filterwarnings("ignore")
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
@@ -106,7 +107,7 @@ if state:
                         "data": state.dataset.to_json(),
                         "strategy": selected_option
                     })
-                    state.cleaned_data = pd.read_json(cleaned)
+                    state.cleaned_data = pd.read_json(io.StringIO(cleaned))
                 else:
                     state.cleaned_data = state.dataset
 

@@ -1,13 +1,34 @@
 from langchain.tools import tool
 import json
 import pandas as pd
+import io
 
 def load_data(file):
-    if file.name.endswith(".csv"):
+
+    # -----------------------------
+    # 🔁 RESET POINTER (IMPORTANT)
+    # -----------------------------
+    if hasattr(file, "seek"):
+        file.seek(0)
+
+    # -----------------------------
+    # 🧠 GET FILE NAME SAFELY
+    # -----------------------------
+    file_name = getattr(file, "name", "")
+
+    # -----------------------------
+    # 📂 HANDLE BASED ON TYPE
+    # -----------------------------
+    if file_name.endswith(".csv") or isinstance(file, io.StringIO):
         return pd.read_csv(file)
-    elif file.name.endswith(".xlsx"):
+
+    elif file_name.endswith(".xlsx"):
         return pd.read_excel(file)
-    else:
+
+    # fallback: try csv
+    try:
+        return pd.read_csv(file)
+    except Exception:
         raise ValueError("Unsupported file format")
     
 @tool

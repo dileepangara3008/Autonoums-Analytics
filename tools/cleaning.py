@@ -1,5 +1,6 @@
 from langchain.tools import tool
 import pandas as pd
+import io
 
 @tool
 def cleaning_tool(data: str, strategy: str) -> str:
@@ -13,8 +14,7 @@ def cleaning_tool(data: str, strategy: str) -> str:
     Returns:
         Cleaned dataframe as JSON string
     """
-    df = pd.read_json(data)
-
+    df = pd.read_json(io.StringIO(data))
     if strategy == "drop":
         df = df.dropna()
     elif strategy == "fill":

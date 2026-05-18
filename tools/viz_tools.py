@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.figure_factory as ff
 import numpy as np
 import json
-
+import io
 
 # -----------------------------
 # 📊 HISTOGRAM
@@ -16,7 +16,7 @@ def histogram_tool(input_json: str):
     """
 
     payload = json.loads(input_json)
-    df = pd.read_json(payload["data"])
+    df = pd.read_json(io.StringIO(payload["data"]))
     column = payload["column"]
 
     df[column] = pd.to_numeric(df[column], errors="coerce")
@@ -44,7 +44,7 @@ def scatter_tool(input_json: str):
     """
     try:
         payload = json.loads(input_json)
-        df = pd.read_json(payload["data"])
+        df = pd.read_json(io.StringIO(payload["data"]))
         x, y = payload["x"], payload["y"]
 
         fig = px.scatter(df, x=x, y=y, title=f"{x} vs {y}")
@@ -65,7 +65,7 @@ def line_chart_tool(input_json: str):
     """
     try:
         payload = json.loads(input_json)
-        df = pd.read_json(payload["data"])
+        df = pd.read_json(io.StringIO(payload["data"]))
         x, y = payload["x"], payload["y"]
 
         fig = px.line(df, x=x, y=y, title=f"{y} over {x}")
@@ -86,7 +86,7 @@ def bar_chart_tool(input_json: str):
     """
     try:
         payload = json.loads(input_json)
-        df = pd.read_json(payload["data"])
+        df = pd.read_json(io.StringIO(payload["data"]))
         x, y = payload["x"], payload["y"]
 
         fig = px.bar(df, x=x, y=y, title=f"{y} by {x}")
@@ -107,7 +107,7 @@ def pie_chart_tool(input_json: str):
     """
     try:
         payload = json.loads(input_json)
-        df = pd.read_json(payload["data"])
+        df = pd.read_json(io.StringIO(payload["data"]))
         names, values = payload["names"], payload["values"]
 
         fig = px.pie(df, names=names, values=values)
@@ -128,7 +128,7 @@ def box_plot_tool(input_json: str):
     """
     try:
         payload = json.loads(input_json)
-        df = pd.read_json(payload["data"])
+        df = pd.read_json(io.StringIO(payload["data"]))
         column = payload["column"]
 
         fig = px.box(df, y=column)
@@ -149,7 +149,7 @@ def heatmap_tool(input_json: str):
     """
     try:
         payload = json.loads(input_json)
-        df = pd.read_json(payload["data"])
+        df = pd.read_json(io.StringIO(payload["data"]))
 
         numeric_df = df.select_dtypes(include=np.number)
         corr = numeric_df.corr()
