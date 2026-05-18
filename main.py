@@ -165,7 +165,8 @@ if state:
                 if "figure" in chart:
                     cols[i % 2].plotly_chart(
                         chart["figure"],
-                        use_container_width=True
+                        use_container_width=True,
+                        width="stretch"
                     )
 
         # -----------------------------
