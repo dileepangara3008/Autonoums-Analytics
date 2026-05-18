@@ -2,8 +2,10 @@ from langchain.tools import tool
 import pandas as pd
 import numpy as np
 import json
+import io
+import warnings
 
-
+warnings.filterwarnings("ignore")
 # -----------------------------
 # 📊 DESCRIPTIVE STATISTICS
 # -----------------------------
@@ -15,7 +17,7 @@ def descriptive_statistics_tool(data: str) -> str:
     """
 
     try:
-        df = pd.read_json(data)
+        df = pd.read_json(io.StringIO(data))
 
         stats = df.describe(include='all')
 
