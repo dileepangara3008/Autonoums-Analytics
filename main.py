@@ -110,9 +110,16 @@ if state:
 
     if state.charts:
         st.subheader("📊 Visualizations")
-        for chart in state.charts:
-            if "column" in chart:
-                st.bar_chart(df[chart["column"]])
+
+        cols = st.columns(2)
+
+        for i, chart in enumerate(state.charts):
+
+            if "figure" in chart:
+                cols[i % 2].plotly_chart(
+                    chart["figure"],
+                    use_container_width=True
+                )
 
     if state.insights:
 

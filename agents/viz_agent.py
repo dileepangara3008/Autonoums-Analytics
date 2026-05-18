@@ -9,6 +9,7 @@ from tools.viz_tools import (
     heatmap_tool
 )
 import json
+import re
 
 
 # -----------------------------
@@ -18,34 +19,110 @@ def safe_column(col, df):
     return col if col in df.columns else None
 
 
-def is_useful_column(col):
-    bad_keywords = ["id", "index"]
-    return not any(k in col.lower() for k in bad_keywords)
+def is_valid_column(col, df):
+
+    if col not in df.columns:
+        return False
+
+    # ❌ remove id/index
+    if any(k in col.lower() for k in ["id", "index"]):
+        return False
+
+    # ❌ constant column
+    if df[col].nunique() <= 1:
+        return False
+
+    # ❌ too many nulls
+    if df[col].isnull().mean() > 0.5:
+        return False
+
+    return True
 
 
+# -----------------------------
+# 🔍 VALIDATE LLM OUTPUT
+# -----------------------------
+def validate_chart(item, df):
+
+    chart_type = item.get("type")
+
+    if chart_type == "histogram":
+        return is_valid_column(item.get("column"), df)
+
+    if chart_type in ["scatter", "line"]:
+        return (
+            is_valid_column(item.get("x"), df) and
+            is_valid_column(item.get("y"), df)
+        )
+
+    if chart_type == "bar":
+        return (
+            is_valid_column(item.get("x"), df) and
+            is_valid_column(item.get("y"), df)
+        )
+
+    if chart_type == "box":
+        return is_valid_column(item.get("column"), df)
+
+    if chart_type == "pie":
+        return (
+            is_valid_column(item.get("names"), df) and
+            is_valid_column(item.get("values"), df)
+        )
+
+    if chart_type == "heatmap":
+        return True
+
+    return False
+
+
+# -----------------------------
+# 🔥 FIX: EXTRACT JSON FROM LLM
+# -----------------------------
+def extract_json(text):
+    try:
+        # extract JSON inside ```json ... ```
+        match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(1))
+
+        # fallback direct parse
+        return json.loads(text)
+
+    except Exception as e:
+        print("JSON extraction failed:", e)
+        return []
+
+
+# -----------------------------
+# 🚀 MAIN AGENT
+# -----------------------------
 def run_viz_agent(df, eda_results=None, stats_results=None):
 
     llm = get_llm()
     data_json = df.to_json()
 
+    # -----------------------------
+    # 📊 FILTER VALID COLUMNS
+    # -----------------------------
     numeric_cols = [
         col for col in df.select_dtypes(include="number").columns
-        if is_useful_column(col)
+        if is_valid_column(col, df)
     ]
 
     categorical_cols = [
         col for col in df.select_dtypes(include="object").columns
-        if is_useful_column(col)
+        if is_valid_column(col, df)
     ]
 
     # -----------------------------
-    # 🧠 CONTEXT FOR LLM
+    # 🧠 CONTEXT
     # -----------------------------
     eda_summary = json.dumps(eda_results) if eda_results else "None"
     stats_summary = json.dumps(stats_results) if stats_results else "None"
 
     # -----------------------------
-    # 🧠 SMART PROMPT
+    # 🧠 PROMPT
     # -----------------------------
     prompt = f"""
     You are a data visualization expert.
@@ -58,10 +135,10 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
     Dataset columns:
     {df.columns.tolist()}
 
-    Numeric columns:
+    Valid Numeric columns:
     {numeric_cols}
 
-    Categorical columns:
+    Valid Categorical columns:
     {categorical_cols}
 
     EDA Results:
@@ -71,44 +148,50 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
     {stats_summary}
 
     Your task:
-    Generate a COMPLETE and MEANINGFUL visualization plan.
+    Create a DASHBOARD (not random charts).
 
-    Think step-by-step:
+    Requirements:
+    - Generate 4–6 charts
+    - Each chart must show DIFFERENT insight
 
-    1. Distribution → show how data is spread
-    2. Relationships → show correlations or trends
-    3. Comparisons → show categorical differences
-    4. Insights from stats → highlight important findings
+    Guidelines:
+    - Use EDA → distributions
+    - Use Stats → relationships
+    - Prefer strongest relationships from stats
 
-    Rules:
-    - If correlation exists → include scatter plot
-    - If regression exists → include line plot
-    - If anomalies exist → include box plot
-    - If multiple numeric columns → include heatmap
-    - Always include at least 3 different types of charts
-    - Avoid id/index columns
+    Charts:
+    - histogram → distribution
+    - scatter → relationships
+    - bar → comparison
+    - box → outliers
+    - heatmap → correlations
 
-    Return STRICT JSON list:
+    STRICT RULES:
+    - ONLY use provided columns
+    - DO NOT use id/index columns
+    - DO NOT invent columns
+    - RETURN ONLY JSON (NO TEXT)
 
+    Example:
     [
-      {{"type": "histogram", "column": "col1"}},
-      {{"type": "scatter", "x": "col1", "y": "col2"}},
-      {{"type": "bar", "x": "category", "y": "col1"}},
-      {{"type": "heatmap"}}
+      {{"type": "histogram", "column": "sales"}},
+      {{"type": "scatter", "x": "price", "y": "sales"}}
     ]
-
-    Return ONLY valid JSON.
     """
 
     decision = llm.invoke(prompt).content.strip()
 
-    try:
-        chart_plan = json.loads(decision)
-    except:
-        chart_plan = []
+    print("LLM RAW OUTPUT:", decision)
 
     # -----------------------------
-    # 🔁 FALLBACK
+    # 🔥 FIXED PARSING
+    # -----------------------------
+    chart_plan = extract_json(decision)
+
+    print("PARSED CHART PLAN:", chart_plan)
+
+    # -----------------------------
+    # 🔁 FALLBACK (ONLY IF EMPTY)
     # -----------------------------
     if not chart_plan:
 
@@ -130,6 +213,11 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
         if len(numeric_cols) >= 2:
             chart_plan.append({"type": "heatmap"})
 
+    # -----------------------------
+    # LIMIT DASHBOARD SIZE
+    # -----------------------------
+    chart_plan = chart_plan[:6]
+
     charts = []
 
     # -----------------------------
@@ -137,15 +225,21 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
     # -----------------------------
     for item in chart_plan:
 
+        if not validate_chart(item, df):
+            continue
+
         try:
             chart_type = item.get("type")
             res = None
 
             if chart_type == "histogram":
                 col = safe_column(item.get("column"), df)
-                if col and is_useful_column(col):
+                if col:
                     res = histogram_tool.invoke({
-                        "input_json": json.dumps({"data": data_json, "column": col})
+                        "input_json": json.dumps({
+                            "data": data_json,
+                            "column": col
+                        })
                     })
 
             elif chart_type == "scatter":
@@ -153,7 +247,11 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
                 y = safe_column(item.get("y"), df)
                 if x and y:
                     res = scatter_tool.invoke({
-                        "input_json": json.dumps({"data": data_json, "x": x, "y": y})
+                        "input_json": json.dumps({
+                            "data": data_json,
+                            "x": x,
+                            "y": y
+                        })
                     })
 
             elif chart_type == "line":
@@ -161,7 +259,11 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
                 y = safe_column(item.get("y"), df)
                 if x and y:
                     res = line_chart_tool.invoke({
-                        "input_json": json.dumps({"data": data_json, "x": x, "y": y})
+                        "input_json": json.dumps({
+                            "data": data_json,
+                            "x": x,
+                            "y": y
+                        })
                     })
 
             elif chart_type == "bar":
@@ -169,7 +271,11 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
                 y = safe_column(item.get("y"), df)
                 if x and y:
                     res = bar_chart_tool.invoke({
-                        "input_json": json.dumps({"data": data_json, "x": x, "y": y})
+                        "input_json": json.dumps({
+                            "data": data_json,
+                            "x": x,
+                            "y": y
+                        })
                     })
 
             elif chart_type == "pie":
@@ -177,19 +283,34 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
                 values = safe_column(item.get("values"), df)
                 if names and values:
                     res = pie_chart_tool.invoke({
-                        "input_json": json.dumps({"data": data_json, "names": names, "values": values})
+                        "input_json": json.dumps({
+                            "data": data_json,
+                            "names": names,
+                            "values": values
+                        })
                     })
 
             elif chart_type == "box":
                 col = safe_column(item.get("column"), df)
                 if col:
                     res = box_plot_tool.invoke({
-                        "input_json": json.dumps({"data": data_json, "column": col})
+                        "input_json": json.dumps({
+                            "data": data_json,
+                            "column": col
+                        })
                     })
 
             elif chart_type == "heatmap" and len(numeric_cols) >= 2:
+
+                filtered_numeric = [
+                    col for col in numeric_cols
+                    if is_valid_column(col, df)
+                ]
+
                 res = heatmap_tool.invoke({
-                    "input_json": json.dumps({"data": data_json})
+                    "input_json": json.dumps({
+                        "data": df[filtered_numeric].to_json()
+                    })
                 })
 
             if isinstance(res, dict) and "figure" in res:

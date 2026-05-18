@@ -12,19 +12,26 @@ import json
 @tool
 def histogram_tool(input_json: str):
     """
-    histogram
+    histogram viz tool
     """
-    try:
-        payload = json.loads(input_json)
-        df = pd.read_json(payload["data"])
-        column = payload["column"]
 
-        fig = px.histogram(df, x=column, title=f"Histogram of {column}")
+    payload = json.loads(input_json)
+    df = pd.read_json(payload["data"])
+    column = payload["column"]
 
-        return {"type": "histogram", "column": column, "figure": fig}
+    df[column] = pd.to_numeric(df[column], errors="coerce")
 
-    except Exception as e:
-        return {"error": str(e)}
+    fig = px.histogram(
+        df,
+        x=column,
+        nbins=20,
+        title=f"Distribution of {column}"
+    )
+
+    return {
+        "type": "histogram",
+        "figure": fig
+    }
 
 
 # -----------------------------
