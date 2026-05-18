@@ -42,3 +42,5 @@ class AgentState(BaseModel):
     # -----------------------------
     logs: List = Field(default_factory=list)
     errors: List = Field(default_factory=list)
+
+    chat_history: list = Field(default_factory=list)

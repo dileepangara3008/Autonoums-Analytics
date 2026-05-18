@@ -11,6 +11,7 @@ import pandas as pd
 from core.state import AgentState
 from agents.ingestion_agent import ingestion_agent
 from graph.builder import build_graph
+from agents.chat_agent import run_chat_agent
 
 # -----------------------------
 # 🚀 INIT GRAPH
@@ -142,3 +143,55 @@ if state:
     if state.errors:
         st.subheader("❌ Errors")
         st.error(state.errors)
+    
+    # -----------------------------
+    # 💬 CHAT WITH DATA
+    # -----------------------------
+    st.divider()
+    st.header("💬 Chat with your Data")
+
+    with st.form("chat_form", clear_on_submit=True):
+
+        user_query = st.text_input("Ask anything about your dataset")
+
+        submitted = st.form_submit_button("Ask")
+
+        if submitted and user_query:
+
+            from agents.chat_agent import run_chat_agent
+
+            response = run_chat_agent(user_query, state)
+
+            st.write("### 🤖 Answer")
+            # -----------------------------
+            # 📊 HANDLE CHART RESPONSE
+            # -----------------------------
+            if isinstance(response, dict) and response.get("type") == "chart":
+
+                # show explanation
+                st.write(response.get("text", ""))
+
+                # show chart
+                if response.get("figure"):
+                    st.plotly_chart(response["figure"], use_container_width=True)
+
+            # -----------------------------
+            # 🧠 HANDLE TEXT RESPONSE
+            # -----------------------------
+            else:
+                st.write(response)
+
+            # save updated state
+            st.session_state.state = state
+
+    # -----------------------------
+    # 🧠 CHAT HISTORY
+    # -----------------------------
+    if state.chat_history:
+
+        st.subheader("🧠 Conversation")
+
+        for chat in reversed(state.chat_history[-5:]):
+            st.markdown(f"**🧑 You:** {chat['user']}")
+            st.markdown(f"**🤖 AI:** {chat['assistant']}")
+            st.markdown("---")
