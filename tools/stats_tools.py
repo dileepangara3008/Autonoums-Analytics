@@ -44,7 +44,10 @@ def t_test_tool(input_json: str) -> str:
     """
     try:
         payload = json.loads(input_json)
-        df = pd.read_json(payload["data"])
+
+        import io
+        df = pd.read_json(io.StringIO(payload["data"]))
+
         col1, col2 = payload["col1"], payload["col2"]
 
         data1 = df[col1].dropna()
@@ -52,14 +55,16 @@ def t_test_tool(input_json: str) -> str:
 
         stat, p = ttest_ind(data1, data2)
 
-        return json.dumps({
+        result = {
             "type": "t_test",
             "col1": col1,
             "col2": col2,
             "t_stat": float(stat),
             "p_value": float(p),
-            "significant": p < 0.05
-        })
+            "significant": bool(p < 0.05)  
+        }
+
+        return json.dumps(result)
 
     except Exception as e:
         return json.dumps({"error": str(e)})

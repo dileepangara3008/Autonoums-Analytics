@@ -1,0 +1,152 @@
+# 🚀 Autonomous Analytics Platform
+
+An AI-powered **autonomous data analytics system** that performs end-to-end data analysis — from ingestion to insights — using a **multi-agent architecture**, interactive dashboard, and conversational interface.
+
+---
+
+## 🧠 Overview
+
+This platform automates the complete data analysis pipeline:
+Ingestion → Cleaning (HITL) → EDA → Statistics → Visualization → Insights → Chat
+
+
+It combines **LLMs + data tools + UI** to create a **self-driven analytics system** with minimal human intervention.
+
+---
+
+## ✨ Key Features
+
+### 📂 Data Ingestion
+- Upload CSV datasets
+- Automatic parsing using Pandas
+- Error handling for invalid formats
+
+---
+
+### ⚠️ Smart Data Cleaning (HITL)
+- Detects missing values automatically
+- Triggers Human-in-the-Loop only when required
+- Options:
+  - Drop missing values
+  - Fill missing values
+  - Skip cleaning
+- Auto-skips if dataset is already clean
+
+---
+
+### 📊 Exploratory Data Analysis (EDA)
+- Descriptive statistics
+- Key observations and patterns
+- Data quality analysis:
+  - Missing values
+  - Invalid values
+  - Outliers
+- Clean UI (removes raw JSON and code)
+
+---
+
+### 📈 Statistical Analysis
+- Correlation analysis
+- Regression modeling
+- Distribution metrics (mean, std, skew)
+- Anomaly detection
+- T-test evaluation
+
+✔ Structured parsing for clean UI  
+✔ Summary-first display for better UX  
+
+---
+
+### 📊 Visualizations
+- Automatic chart generation
+- Supported charts:
+  - Histogram
+  - Scatter plot
+  - Bar chart
+  - Box plot
+  - Heatmap
+- Adaptive visualization based on EDA and stats
+
+---
+
+### 💡 AI Insights
+- Key insights
+- Relationships between variables
+- Anomaly explanations
+- Actionable recommendations
+
+✔ JSON → UI parsing  
+✔ Categorized display:
+- Key Insights
+- Relationships
+- Anomalies
+- Recommendations  
+
+---
+
+### 💬 Chat with Your Data
+- Natural language queries
+- Context-aware responses using:
+  - Dataset
+  - EDA results
+  - Statistical results
+  - Insights
+- Query routing:
+  - Data queries → Pandas Agent
+  - Insight queries → LLM
+- History-aware conversations
+
+---
+
+### 🧠 Multi-Agent Architecture
+
+Each stage is handled by a dedicated agent:
+
+- Ingestion Agent  
+- EDA Agent  
+- Statistical Agent  
+- Visualization Agent  
+- Insights Agent  
+- Chat Agent  
+
+✔ Sequential pipeline execution  
+✔ Modular and scalable design  
+
+---
+
+### 🎨 SaaS-Style Dashboard UI
+
+- Clean vertical layout 
+- Sections:
+  - Overview (metrics)
+  - Dataset preview
+  - EDA
+  - Statistical summary
+  - Charts
+  - Insights
+
+---
+
+### 🧪 Testing (Pytest)
+
+✔ 10+ Unit Tests  
+✔ 3+ Integration Tests  
+
+Covers:
+- Ingestion
+- Cleaning
+- Chat agent
+- Router logic
+- Visualization agent
+
+---
+
+### 🔍 LangSmith Integration
+
+- Trace agent execution
+- Debug LLM calls
+- Improve observability
+
+---
+
+
