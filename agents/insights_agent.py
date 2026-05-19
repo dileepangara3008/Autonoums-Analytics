@@ -1,7 +1,8 @@
 from core.config import get_llm
 import json
+from langsmith import traceable
 
-
+@traceable(name="Insights Agent")
 def run_insights_agent(df, eda_results, stats_results):
 
     llm = get_llm()

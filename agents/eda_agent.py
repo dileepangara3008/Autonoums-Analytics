@@ -6,8 +6,9 @@ from tools.eda_tools import (
     categorical_summary_tool
 )
 import json
+from langsmith import traceable
 
-
+@traceable(name="EDA Agent")
 def run_eda_agent(df):
 
     llm = get_llm()

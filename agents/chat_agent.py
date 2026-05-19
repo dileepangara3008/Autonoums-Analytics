@@ -3,7 +3,7 @@ from langchain_experimental.agents import create_pandas_dataframe_agent
 import json
 import re
 import plotly.express as px
-
+from langsmith import traceable
 
 def extract_json(text):
     try:
@@ -130,6 +130,7 @@ def generate_chart_from_plan(plan, df):
     return None
 
 
+@traceable(name="Chat Agent")
 def run_chat_agent(query, state):
 
     llm = get_llm()

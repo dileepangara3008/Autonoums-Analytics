@@ -7,7 +7,7 @@ from tools.stats_tools import (
     distribution_tool
 )
 import json
-
+from langsmith import traceable
 
 # -----------------------------
 # 🔐 SAFE COLUMN VALIDATION
@@ -15,7 +15,7 @@ import json
 def safe_column(col, df):
     return col if col in df.columns else None
 
-
+@traceable(name="Stats Agent")
 def run_stats_agent(df, eda_results=None):
 
     llm = get_llm()

@@ -10,7 +10,7 @@ from tools.viz_tools import (
 )
 import json
 import re
-
+from langsmith import traceable
 
 # -----------------------------
 # 🔐 SAFE COLUMN VALIDATION
@@ -97,6 +97,7 @@ def extract_json(text):
 # -----------------------------
 # 🚀 MAIN AGENT
 # -----------------------------
+@traceable(name="Visualization Agent")
 def run_viz_agent(df, eda_results=None, stats_results=None):
 
     llm = get_llm()

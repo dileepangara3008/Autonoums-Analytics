@@ -1,4 +1,6 @@
 from tools.data_loader import load_data
+from langsmith import traceable
+
 
 def ingestion_agent(state):
 
