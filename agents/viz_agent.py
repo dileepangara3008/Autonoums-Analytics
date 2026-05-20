@@ -126,20 +126,24 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
     # 🧠 PROMPT
     # -----------------------------
     prompt = f"""
-    You are a data visualization expert.
+    You are an expert data visualization analyst.
+
+    Your task is to design a MEANINGFUL dashboard (not random charts).
 
     You are given:
-    - dataset schema
+    - Dataset schema
     - EDA results
-    - statistical analysis results
+    - Statistical analysis results
 
-    Dataset columns:
+    DATASET:
+
+    Columns:
     {df.columns.tolist()}
 
-    Valid Numeric columns:
+    Numeric Columns:
     {numeric_cols}
 
-    Valid Categorical columns:
+    Categorical Columns:
     {categorical_cols}
 
     EDA Results:
@@ -148,36 +152,67 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
     Statistical Results:
     {stats_summary}
 
-    Your task:
-    Create a DASHBOARD (not random charts).
+    --------------------------------------------------
 
-    Requirements:
-    - Generate 4–6 charts
-    - Each chart must show DIFFERENT insight
+    OBJECTIVE:
+    Create a dashboard with 4–6 charts that reveal IMPORTANT insights.
 
-    Guidelines:
-    - Use EDA → distributions
-    - Use Stats → relationships
-    - Prefer strongest relationships from stats
+    --------------------------------------------------
 
-    Charts:
-    - histogram → distribution
-    - scatter → relationships
-    - bar → comparison
-    - box → outliers
-    - heatmap → correlations
+    DECISION STRATEGY:
 
-    STRICT RULES:
-    - ONLY use provided columns
-    - DO NOT use id/index columns
+    1. PRIORITY 1 → Strong relationships
+    - Use statistical results (correlation, regression)
+    - Prefer scatter plots for relationships
+
+    2. PRIORITY 2 → Distributions
+    - Use histogram for key numeric columns
+    - Use box plots if outliers exist
+
+    3. PRIORITY 3 → Comparisons
+    - Use bar charts for categorical vs numeric
+    - Aggregate values (sum or mean)
+
+    4. PRIORITY 4 → Global view
+    - Use heatmap if multiple numeric columns exist
+
+    --------------------------------------------------
+
+    CHART RULES:
+
+    - histogram → numeric column only
+    - scatter → numeric vs numeric
+    - bar → categorical vs numeric (aggregated)
+    - line → trend (if meaningful ordering exists)
+    - box → numeric distribution
+    - heatmap → correlation of numeric features
+
+    --------------------------------------------------
+
+    STRICT CONSTRAINTS:
+
+    - Use ONLY provided columns
     - DO NOT invent columns
-    - RETURN ONLY JSON (NO TEXT)
+    - DO NOT use id/index columns
+    - DO NOT create duplicate charts
+    - Each chart must show a DIFFERENT insight
+    - Prefer most important relationships first
 
-    Example:
+    --------------------------------------------------
+
+    OUTPUT FORMAT (STRICT JSON ONLY):
+
+    Return a JSON list like:
+
     [
-      {{"type": "histogram", "column": "sales"}},
-      {{"type": "scatter", "x": "price", "y": "sales"}}
+    {{"type": "scatter", "x": "price", "y": "sales"}},
+    {{"type": "histogram", "column": "sales"}},
+    {{"type": "bar", "x": "region", "y": "sales"}},
+    {{"type": "box", "column": "price"}},
+    {{"type": "heatmap"}}
     ]
+
+    DO NOT include explanations or text.
     """
 
     decision = llm.invoke(prompt).content.strip()
