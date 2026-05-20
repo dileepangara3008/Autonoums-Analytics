@@ -105,24 +105,103 @@ def generate_chart_from_plan(plan, df):
     try:
         chart_type = plan.get("type")
 
-        if chart_type == "histogram":
-            return px.histogram(df, x=plan["column"])
+        # -----------------------------
+        # 🧠 EXTRACT COLUMNS
+        # -----------------------------
+        x = plan.get("x")
+        y = plan.get("y")
+        col = plan.get("column")
 
-        if chart_type == "scatter":
-            return px.scatter(df, x=plan["x"], y=plan["y"])
+        # detect types
+        def is_categorical(c):
+            return df[c].dtype == "object"
 
-        if chart_type == "line":
-            return px.line(df, x=plan["x"], y=plan["y"])
+        def is_numeric(c):
+            return df[c].dtype != "object"
 
-        if chart_type == "bar":
-            return px.bar(df, x=plan["x"], y=plan["y"])
+        # -----------------------------
+        # 📊 HISTOGRAM
+        # -----------------------------
+        if chart_type == "histogram" and col:
+            return px.histogram(df, x=col, title=f"Distribution of {col}")
 
+        # -----------------------------
+        # 📊 SCATTER
+        # -----------------------------
+        if chart_type == "scatter" and x and y:
+            return px.scatter(df, x=x, y=y,
+                              title=f"{y} vs {x}")
+
+        # -----------------------------
+        # 📊 LINE
+        # -----------------------------
+        if chart_type == "line" and x and y:
+
+            # if x categorical → aggregate
+            if is_categorical(x) and is_numeric(y):
+                df_grouped = df.groupby(x)[y].mean().reset_index()
+                return px.line(df_grouped, x=x, y=y,
+                               title=f"Average {y} by {x}")
+
+            return px.line(df, x=x, y=y)
+
+        # -----------------------------
+        # 📊 BAR (MOST IMPORTANT)
+        # -----------------------------
+        if chart_type == "bar" and x:
+
+            # case 1: categorical x + numeric y
+            if x and y and is_categorical(x) and is_numeric(y):
+
+                df_grouped = df.groupby(x)[y].sum().reset_index()
+
+                return px.bar(
+                    df_grouped,
+                    x=x,
+                    y=y,
+                    title=f"Total {y} by {x}"
+                )
+
+            # case 2: only categorical x → count
+            if x and is_categorical(x) and not y:
+
+                df_grouped = df[x].value_counts().reset_index()
+                df_grouped.columns = [x, "count"]
+
+                return px.bar(
+                    df_grouped,
+                    x=x,
+                    y="count",
+                    title=f"Count of {x}"
+                )
+
+            # fallback
+            if x and y:
+                return px.bar(df, x=x, y=y)
+
+        # -----------------------------
+        # 📊 BOX
+        # -----------------------------
         if chart_type == "box":
-            return px.box(df, y=plan["column"])
 
+            if y:
+                return px.box(df, y=y, title=f"Distribution of {y}")
+
+            if col:
+                return px.box(df, y=col)
+
+        # -----------------------------
+        # 📊 HEATMAP
+        # -----------------------------
         if chart_type == "heatmap":
+
             numeric_df = df.select_dtypes(include="number")
-            return px.imshow(numeric_df.corr())
+
+            return px.imshow(
+                numeric_df.corr(),
+                text_auto=True,
+                title="Correlation Heatmap"
+            )
 
     except Exception as e:
         print("Chart error:", e)
