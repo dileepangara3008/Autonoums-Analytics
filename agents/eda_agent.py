@@ -18,27 +18,44 @@ def run_eda_agent(df):
     # 🧠 DECIDE WHICH TOOLS
     # -----------------------------
     prompt = f"""
-    You are a data analyst.
+    You are an expert data analyst.
 
-    Based on dataset, decide which tools to use.
+    Your task is to decide which analysis tools to run on a dataset.
 
-    Available tools:
+    AVAILABLE TOOLS:
     - descriptive_statistics
     - missing_values
     - correlation
     - categorical_summary
 
-    Rules:
-    - Always include descriptive_statistics
-    - Include missing_values if any nulls exist
-    - Include correlation if numeric columns exist
-    - Include categorical_summary if categorical columns exist
+    DATASET INFORMATION:
 
-    Return JSON list like:
+    Columns:
+    {df.columns.tolist()}
+
+    Numeric Columns:
+    {df.select_dtypes(include="number").columns.tolist()}
+
+    Categorical Columns:
+    {df.select_dtypes(include="object").columns.tolist()}
+
+    Missing Values Count (per column):
+    {df.isnull().sum().to_dict()}
+
+    RULES:
+    - ALWAYS include "descriptive_statistics"
+    - Include "missing_values" ONLY if any column has missing values (> 0)
+    - Include "correlation" ONLY if there are 2 or more numeric columns
+    - Include "categorical_summary" ONLY if categorical columns exist
+    - DO NOT include unnecessary tools
+    - DO NOT invent tools
+
+    OUTPUT FORMAT (STRICT):
+    Return ONLY a JSON list.
+    Example:
     ["descriptive_statistics", "correlation"]
 
-    Dataset sample:
-    {df.head().to_json()}
+    DO NOT include explanations or extra text.
     """
 
     decision = llm.invoke(prompt).content.strip()

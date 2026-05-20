@@ -13,49 +13,91 @@ def run_insights_agent(df, eda_results, stats_results):
     prompt = f"""
     You are a senior data analyst.
 
+    Your task is to generate HIGH-QUALITY, DATA-DRIVEN insights.
+
     You are given:
-    - dataset sample
+    - Dataset sample
     - EDA results
-    - statistical analysis results
+    - Statistical analysis results
 
-    Your task:
-    Generate clear, meaningful insights.
+    --------------------------------------------------
 
-    Dataset sample:
+    DATASET SAMPLE:
     {df.head().to_json()}
 
-    EDA Results:
+    EDA RESULTS:
     {eda_results}
 
-    Statistical Results:
+    STATISTICAL RESULTS:
     {stats_results}
 
-    Guidelines:
-    - Focus on patterns, relationships, and anomalies
-    - Avoid repeating raw numbers unless necessary
-    - Provide business-relevant insights (not technical explanation)
-    - Be concise and actionable
+    --------------------------------------------------
 
-    Return STRICT JSON in this format:
+    OBJECTIVE:
+    Generate insights that are:
+    - Accurate (based ONLY on given data)
+    - Non-obvious (avoid trivial statements)
+    - Actionable (useful for decision making)
+
+    --------------------------------------------------
+
+    STRICT RULES:
+
+    - Use ONLY the provided data and results
+    - DO NOT hallucinate or assume patterns
+    - DO NOT repeat raw numbers unless needed
+    - DO NOT restate obvious facts (e.g., "data has multiple columns")
+    - Each insight must be meaningful and distinct
+
+    --------------------------------------------------
+
+    INSIGHT STRATEGY:
+
+    1. KEY INSIGHTS
+      - Focus on strongest patterns from EDA
+      - Highlight important distributions or trends
+
+    2. RELATIONSHIPS
+      - MUST use statistical results (correlation/regression)
+      - Mention strength (strong/weak) and direction (positive/negative)
+
+    3. ANOMALIES
+      - Use anomaly detection or distribution skew
+      - Highlight unusual patterns or outliers
+
+    4. RECOMMENDATIONS
+      - MUST be based on insights (not generic advice)
+      - Should be actionable and specific
+
+    --------------------------------------------------
+
+    QUALITY CHECK (VERY IMPORTANT):
+
+    Before finalizing:
+    - Remove generic insights
+    - Remove repeated ideas
+    - Ensure each point adds new value
+
+    --------------------------------------------------
+
+    OUTPUT FORMAT (STRICT JSON ONLY):
 
     {{
       "key_insights": [
-        "insight 1",
-        "insight 2",
-        "insight 3"
+        "..."
       ],
       "relationships": [
-        "relationship 1",
-        "relationship 2"
+        "..."
       ],
       "anomalies": [
-        "anomaly 1"
+        "..."
       ],
       "recommendations": [
-        "recommendation 1",
-        "recommendation 2"
+        "..."
       ]
     }}
+
+    DO NOT include any text outside JSON.
     """
 
     response = llm.invoke(prompt).content.strip()
