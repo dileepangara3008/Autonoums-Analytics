@@ -17,7 +17,7 @@ os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
 st.set_page_config(page_title="Autonomous Analytics AI", layout="wide")
-st.title("🚀 Autonomous Analytics Platform")
+st.title("🚀 Autonomous Data Analytics Platform")
 
 graph = build_graph()
 

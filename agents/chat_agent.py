@@ -217,7 +217,7 @@ def run_chat_agent(query, state):
     df = state.cleaned_data if state.cleaned_data is not None else state.dataset
 
     # -----------------------------
-    # 🧠 HISTORY
+    # 🧠 CONTEXT
     # -----------------------------
     history_text = ""
 
@@ -225,16 +225,80 @@ def run_chat_agent(query, state):
         history_text += f"User: {h['user']}\nAssistant: {h['assistant']}\n"
 
     # -----------------------------
-    # 🔀 ROUTER
+    # 🧠 CONTEXT RESOLUTION (NEW)
     # -----------------------------
-    qtype = detect_query_type(query)
+    context_prompt = f"""
+    You are a smart assistant.
+
+    Conversation:
+    {history_text}
+
+    Current query:
+    {query}
+
+    Task:
+    Rewrite the query to be fully explicit by resolving references like:
+    - "they"
+    - "it"
+    - "them"
+
+    Example:
+    User: how many categories?
+    User: what are they?
+    → what are the categories
+
+    Return ONLY rewritten query.
+    """
+
+    resolved_query = llm.invoke(context_prompt).content.strip()
+
+    # -----------------------------
+    # 🧠 STEP 1: DECIDE APPROACH (VERY IMPORTANT)
+    # -----------------------------
+    decision_prompt = f"""
+    You are an intelligent data assistant.
+
+    Your job is to decide HOW to answer the user query.
+
+    Available approaches:
+    1. DATA → requires dataframe operations (exact values, filtering, aggregation, listing values)
+    2. VISUALIZATION → requires generating a chart
+    3. INSIGHT → requires explanation using EDA/statistics/insights
+    4. GENERAL → normal conversation
+
+    DATASET COLUMNS:
+    {df.columns.tolist()}
+
+    EDA RESULTS:
+    {state.eda_results}
+
+    STATISTICAL RESULTS:
+    {state.statistical_results}
+
+    EXISTING INSIGHTS:
+    {state.insights}
+
+    QUERY:
+    {resolved_query}
+
+    RULES:
+    - If query asks for values, counts, categories, listing → DATA
+    - If query asks for chart/plot → VISUALIZATION
+    - If query asks why/explain/reason → INSIGHT
+    - If unclear → GENERAL
+
+    Return ONLY ONE WORD:
+    DATA / VISUALIZATION / INSIGHT / GENERAL
+    """
+
+    decision = llm.invoke(decision_prompt).content.strip().upper()
 
     try:
 
         # -----------------------------
-        # 📊 DATA QUERY → PANDAS AGENT
+        # 📊 DATA → PANDAS AGENT
         # -----------------------------
-        if qtype == "data":
+        if decision == "DATA":
 
             agent = create_pandas_dataframe_agent(
                 llm,
@@ -243,77 +307,95 @@ def run_chat_agent(query, state):
                 allow_dangerous_code=True
             )
 
-            enhanced_query = f"""
-            You are working with a pandas dataframe.
+            data_prompt = f"""
+            You are a pandas dataframe expert.
 
-            IMPORTANT:
-            - Use actual data
-            - Do NOT assume anything
-            - For comparisons, use groupby operations
-            - Return exact results
+            STRICT RULES:
+            - Use ONLY the dataframe (df)
+            - DO NOT assume anything
+            - DO NOT invent values
+            - Always compute using pandas
 
-            Examples:
-            - "compare sales by region" → group by region and sum sales
-            - "average sales by region" → group by region and mean
+            SPECIAL:
+            - For categories → use df[col].unique()
+            - For counts → use value_counts()
+            - For aggregation → use groupby()
 
-            Dataset columns:
+            DATASET COLUMNS:
             {df.columns.tolist()}
 
-            Question:
-            {query}
+            QUERY:
+            {resolved_query}
+
+            Return ONLY final answer.
             """
 
-            result = agent.invoke(enhanced_query)
-
+            result = agent.invoke(data_prompt)
             response = result.get("output", result)
 
-        elif qtype == "viz":
+        # -----------------------------
+        # 📊 VISUALIZATION (KEEP YOUR LOGIC)
+        # -----------------------------
+        elif decision == "VISUALIZATION":
 
             plan = plan_chart_with_llm(query, df, state, llm)
-
             fig = generate_chart_from_plan(plan, df)
 
             response = {
                 "type": "chart",
                 "figure": fig,
-                "text": f"Generated {plan.get('type')} chart based on your query."
+                "text": f"Generated {plan.get('type')} chart."
             }
 
         # -----------------------------
-        # 🧠 INSIGHT QUERY → LLM
+        # 🧠 INSIGHT
+        # -----------------------------
+        elif decision == "INSIGHT":
+
+            insight_prompt = f"""
+            You are a senior data analyst.
+
+            Use the following context to answer:
+
+            EDA RESULTS:
+            {state.eda_results}
+
+            STATISTICAL RESULTS:
+            {state.statistical_results}
+
+            INSIGHTS:
+            {state.insights}
+
+            RULES:
+            - DO NOT compute manually
+            - DO NOT assume values
+            - Explain based on existing analysis
+            - Be concise and clear
+
+            QUERY:
+            {resolved_query}
+            """
+
+            response = llm.invoke(insight_prompt).content.strip()
+
+        # -----------------------------
+        # 💬 GENERAL
         # -----------------------------
         else:
 
-            prompt = f"""
-            You are a data analyst assistant.
+            general_prompt = f"""
+            You are a helpful assistant.
 
-            IMPORTANT RULE:
-            - DO NOT perform calculations manually
-            - If numerical calculation is needed, assume it is already computed
-            - Only explain results
-
-            Conversation History:
+            Conversation:
             {history_text}
 
-            Dataset columns:
-            {df.columns.tolist()}
+            QUERY:
+            {resolved_query}
 
-            EDA Results:
-            {state.eda_results}
-
-            Statistical Results:
-            {state.statistical_results}
-
-            Insights:
-            {state.insights}
-
-            Question:
-            {query}
-
-            Answer clearly using context.
+            Answer naturally.
             """
 
-            response = llm.invoke(prompt).content.strip()
+            response = llm.invoke(general_prompt).content.strip()
 
     except Exception as e:
         response = f"Error processing query: {str(e)}"
@@ -322,7 +404,7 @@ def run_chat_agent(query, state):
     # 💾 SAVE MEMORY
     # -----------------------------
     state.chat_history.append({
-        "user": query,
+        "user": resolved_query,
         "assistant": response
     })
 

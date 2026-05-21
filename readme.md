@@ -23,7 +23,7 @@ It combines **LLMs + data tools + UI** to create a **self-driven analytics syste
 | Agent | Responsibility |
 |------|---------------|
 | Ingestion Agent | Loads dataset and initializes state |
-| Cleaning Agent | Handles missing values (HITL) |
+| Cleaning  | Handles missing values (HITL) |
 | EDA Agent | Generates descriptive statistics |
 | Statistical Agent | Performs correlation, regression, tests |
 | Visualization Agent | Creates charts using LLM planning |
@@ -166,13 +166,13 @@ Covers:
 
 ### Project Structure
 autonomous-analytics/
-- │
-- ├── app/
-- ├── agents/
-- ├── tools/
-- ├── core/
-- ├── graph/
-- ├── tests/
+ │
+ ├── app/
+ ├── agents/
+ ├── tools/
+ ├── core/
+ ├── graph/
+ ├──tests/
 
 ### 🛠️ Tech Stack
 - Frontend: Streamlit
