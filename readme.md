@@ -14,6 +14,23 @@ It combines **LLMs + data tools + UI** to create a **self-driven analytics syste
 
 ---
 
+## Architecture
+
+![Dashboard](graph.png)
+
+## 🧠 Agent Roles
+
+| Agent | Responsibility |
+|------|---------------|
+| Ingestion Agent | Loads dataset and initializes state |
+| Cleaning Agent | Handles missing values (HITL) |
+| EDA Agent | Generates descriptive statistics |
+| Statistical Agent | Performs correlation, regression, tests |
+| Visualization Agent | Creates charts using LLM planning |
+| Insights Agent | Generates structured insights |
+| Chat Agent | Handles user queries and routing |
+
+
 ## ✨ Key Features
 
 ### 📂 Data Ingestion
@@ -147,6 +164,30 @@ Covers:
 - Debug LLM calls
 - Improve observability
 
----
+### Project Structure
+autonomous-analytics/
+- │
+- ├── app/
+- ├── agents/
+- ├── tools/
+- ├── core/
+- ├── graph/
+- ├── tests/
 
+### 🛠️ Tech Stack
+- Frontend: Streamlit
+- LLM Framework: LangChain Langgraph
+- Data Processing: Pandas
+- Visualization: Plotly
+- Testing: Pytest
+- Observability: LangSmith
 
+### ⚠️ Limitations
+- Large datasets may impact performance
+- LLM outputs may vary slightly
+- Limited time-series intelligence
+- Requires structured datasets
+
+### 📄 License
+
+- This project is for learning and research purposes.
