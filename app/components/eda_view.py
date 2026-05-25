@@ -23,13 +23,18 @@ def render_eda(state):
 
             df_summary = pd.DataFrame(stats["summary"]).T
 
-            # -----------------------------
-            # ✅ FIX ARROW ISSUE
-            # -----------------------------
-            df_summary = df_summary.applymap(
-                lambda x: float(x) if isinstance(x, (int, float)) else str(x)
-            )
-            st.dataframe(df_summary, width="stretch")
+            # 🔥 FIX Arrow Serialization Issue
+            df_summary = df_summary.copy()
+
+            for col in df_summary.columns:
+                try:
+                    df_summary[col] = pd.to_numeric(df_summary[col])
+                except:
+                    pass
+
+            df_summary = df_summary.where(pd.notnull(df_summary), None)
+
+            st.dataframe(df_summary, use_container_width=True)
 
     if "summary" in eda:
         st.success(eda["summary"])
