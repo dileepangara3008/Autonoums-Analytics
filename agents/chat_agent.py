@@ -228,26 +228,40 @@ def run_chat_agent(query, state):
     # 🧠 CONTEXT RESOLUTION (NEW)
     # -----------------------------
     context_prompt = f"""
-    You are a smart assistant.
+    You are a query rewriter.
 
-    Conversation:
-    {history_text}
+    Your ONLY job is to resolve references like:
+    - they
+    - it
+    - them
+    - that
 
-    Current query:
-    {query}
+    STRICT RULES:
+    - DO NOT add new words
+    - DO NOT change meaning
+    - DO NOT infer extra details
+    - DO NOT expand the query
+    - If query is already clear → return it EXACTLY as is
 
-    Task:
-    Rewrite the query to be fully explicit by resolving references like:
-    - "they"
-    - "it"
-    - "them"
+    Examples:
 
-    Example:
     User: how many categories?
     User: what are they?
     → what are the categories
 
-    Return ONLY rewritten query.
+    User: average revenue
+    → average revenue   (UNCHANGED)
+
+    User: total sales by region
+    → total sales by region   (UNCHANGED)
+
+    Conversation:
+    {history_text}
+
+    Query:
+    {query}
+
+    Return ONLY final query.
     """
 
     resolved_query = llm.invoke(context_prompt).content.strip()

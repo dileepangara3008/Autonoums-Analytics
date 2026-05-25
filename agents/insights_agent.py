@@ -1,24 +1,63 @@
 from core.config import get_llm
 import json
+import re
 from langsmith import traceable
 
+
+# -----------------------------
+# 🔥 JSON EXTRACTOR
+# -----------------------------
+def extract_json(text):
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        return match.group(0)
+    return text
+
+
+# -----------------------------
+# 🔥 NORMALIZE KEYS
+# -----------------------------
+def normalize_keys(insights):
+    return {
+        "key_insights": insights.get("key_insights") or insights.get("Key Insights") or [],
+        "relationships": insights.get("relationships") or insights.get("Relationships") or [],
+        "anomalies": insights.get("anomalies") or insights.get("Anomalies") or [],
+        "recommendations": insights.get("recommendations") or insights.get("Recommendations") or []
+    }
+
+
+# -----------------------------
+# 🔥 CLEAN OUTPUT
+# -----------------------------
+def clean_insights(insights):
+
+    def clean_list(items):
+        return [
+            i.strip()
+            for i in items
+            if isinstance(i, str) and len(i.strip()) > 10
+        ][:4]  # limit size
+
+    return {
+        "key_insights": clean_list(insights.get("key_insights", [])),
+        "relationships": clean_list(insights.get("relationships", [])),
+        "anomalies": clean_list(insights.get("anomalies", [])),
+        "recommendations": clean_list(insights.get("recommendations", []))
+    }
+
+
+# -----------------------------
+# 🧠 INSIGHTS AGENT
+# -----------------------------
 @traceable(name="Insights Agent")
 def run_insights_agent(df, eda_results, stats_results):
 
     llm = get_llm()
 
-    # -----------------------------
-    # 🧠 PROMPT (GENERALIZED)
-    # -----------------------------
     prompt = f"""
     You are a senior data analyst.
 
-    Your task is to generate HIGH-QUALITY, DATA-DRIVEN insights.
-
-    You are given:
-    - Dataset sample
-    - EDA results
-    - Statistical analysis results
+    Your job is to generate HIGH-QUALITY, DATA-GROUNDED insights.
 
     --------------------------------------------------
 
@@ -33,80 +72,42 @@ def run_insights_agent(df, eda_results, stats_results):
 
     --------------------------------------------------
 
-    OBJECTIVE:
-    Generate insights that are:
-    - Accurate (based ONLY on given data)
-    - Non-obvious (avoid trivial statements)
-    - Actionable (useful for decision making)
+    CRITICAL RULES:
+
+    - Use ONLY the provided data
+    - DO NOT hallucinate numbers or relationships
+    - DO NOT give generic advice
+    - Keep insights concise and meaningful
 
     --------------------------------------------------
 
-    STRICT RULES:
+    STRUCTURE:
 
-    - Use ONLY the provided data and results
-    - DO NOT hallucinate or assume patterns
-    - DO NOT repeat raw numbers unless needed
-    - DO NOT restate obvious facts (e.g., "data has multiple columns")
-    - Each insight must be meaningful and distinct
-
-    --------------------------------------------------
-
-    INSIGHT STRATEGY:
-
-    1. KEY INSIGHTS
-      - Focus on strongest patterns from EDA
-      - Highlight important distributions or trends
-
-    2. RELATIONSHIPS
-      - MUST use statistical results (correlation/regression)
-      - Mention strength (strong/weak) and direction (positive/negative)
-
-    3. ANOMALIES
-      - Use anomaly detection or distribution skew
-      - Highlight unusual patterns or outliers
-
-    4. RECOMMENDATIONS
-      - MUST be based on insights (not generic advice)
-      - Should be actionable and specific
+    1. KEY INSIGHTS (max 3-4)
+    2. RELATIONSHIPS (only strong ones from stats)
+    3. ANOMALIES (based on skew/outliers)
+    4. RECOMMENDATIONS (must follow insights)
 
     --------------------------------------------------
 
-    QUALITY CHECK (VERY IMPORTANT):
-
-    Before finalizing:
-    - Remove generic insights
-    - Remove repeated ideas
-    - Ensure each point adds new value
-
-    --------------------------------------------------
-
-    OUTPUT FORMAT (STRICT JSON ONLY):
+    OUTPUT STRICT JSON ONLY:
 
     {{
-      "key_insights": [
-        "..."
-      ],
-      "relationships": [
-        "..."
-      ],
-      "anomalies": [
-        "..."
-      ],
-      "recommendations": [
-        "..."
-      ]
+      "key_insights": [],
+      "relationships": [],
+      "anomalies": [],
+      "recommendations": []
     }}
-
-    DO NOT include any text outside JSON.
     """
 
     response = llm.invoke(prompt).content.strip()
 
     # -----------------------------
-    # 🛡️ SAFE PARSE
+    # 🛡️ ROBUST PARSE
     # -----------------------------
     try:
-        insights = json.loads(response)
+        cleaned = extract_json(response)
+        insights = json.loads(cleaned)
     except:
         insights = {
             "key_insights": [response],
@@ -114,5 +115,11 @@ def run_insights_agent(df, eda_results, stats_results):
             "anomalies": [],
             "recommendations": []
         }
+
+    # -----------------------------
+    # 🔥 NORMALIZE + CLEAN
+    # -----------------------------
+    insights = normalize_keys(insights)
+    insights = clean_insights(insights)
 
     return insights
