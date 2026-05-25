@@ -54,33 +54,56 @@ def render_chat(state):
             st.write(query)
 
         # -----------------------------
-        # GET RESPONSE
+        # GET RESPONSE (ONLY ONCE)
         # -----------------------------
-        response = run_chat_agent(query, state)
+        result = run_chat_agent(query, state, stream=True)
 
         # -----------------------------
         # SHOW ASSISTANT RESPONSE
         # -----------------------------
         with st.chat_message("assistant"):
 
-            # 🎯 HANDLE CHART RESPONSE
-            if isinstance(response, dict) and response.get("type") == "chart":
+            # ==========================================
+            # 📊 HANDLE CHART RESPONSE
+            # ==========================================
+            if isinstance(result, dict) and result.get("type") == "chart":
 
-                fig = response.get("figure")
+                fig = result.get("figure")
 
                 if fig:
                     st.plotly_chart(fig, use_container_width=True)
 
-                if response.get("text"):
-                    st.write(response["text"])
+                if result.get("text"):
+                    st.write(result["text"])
 
+                full_response = result  # save as dict
+
+            # ==========================================
+            # 🔥 STREAM TEXT RESPONSE
+            # ==========================================
+            elif hasattr(result, "__iter__"):
+
+                response_placeholder = st.empty()
+                full_response = ""
+
+                for chunk in result:
+                    content = chunk.content if hasattr(chunk, "content") else str(chunk)
+                    full_response += content
+
+                    response_placeholder.markdown(full_response)
+
+            # ==========================================
+            # 💬 NORMAL RESPONSE (FALLBACK)
+            # ==========================================
             else:
-                st.write(response)
+                st.write(result)
+                full_response = result
 
-        # ======================================================
-        # 💾 SAVE STATE
-        # ======================================================
-        st.session_state.state = state
 
-        # 🔄 RERUN TO UPDATE CHAT
-        st.rerun()
+        # -----------------------------
+        # SAVE TO CHAT HISTORY
+        # -----------------------------
+        state.chat_history.append({
+            "user": query,
+            "assistant": full_response
+        })

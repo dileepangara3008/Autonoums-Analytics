@@ -210,7 +210,7 @@ def generate_chart_from_plan(plan, df):
 
 
 @traceable(name="Chat Agent")
-def run_chat_agent(query, state):
+def run_chat_agent(query, state, stream=False):
 
     llm = get_llm()
 
@@ -390,7 +390,10 @@ def run_chat_agent(query, state):
             {resolved_query}
             """
 
-            response = llm.invoke(insight_prompt).content.strip()
+            if stream:
+                return llm.stream(insight_prompt)
+            else:
+                return llm.invoke(insight_prompt).content.strip()
 
         # -----------------------------
         # 💬 GENERAL
@@ -409,7 +412,10 @@ def run_chat_agent(query, state):
             Answer naturally.
             """
 
-            response = llm.invoke(general_prompt).content.strip()
+            if stream:
+                return llm.stream(general_prompt)
+            else:
+                return llm.invoke(general_prompt).content.strip()
 
     except Exception as e:
         response = f"Error processing query: {str(e)}"
