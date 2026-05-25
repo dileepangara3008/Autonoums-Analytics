@@ -165,14 +165,150 @@ Covers:
 - Improve observability
 
 ### Project Structure
-autonomous-analytics/
- │
- ├── app/
- ├── agents/
- ├── tools/
- ├── core/
- ├── graph/
- ├──tests/
+
+```text
+AUTONOMOUS-ANALYTICS/
+│
+├── agents/
+│   ├── ingestion_agent.py
+│   ├── eda_agent.py
+│   ├── stats_agent.py
+│   ├── visualization_agent.py
+│   ├── insights_agent.py
+│   └── chat_agent.py
+│
+├── tools/
+│   ├── cleaning.py
+│   ├── eda_tools.py
+│   ├── stats_tools.py
+│   ├── data_loader.py
+│   ├── visualization_tools.py
+│   └── insights_tools.py
+│
+├── graph/
+│   ├── builder.py
+│   ├── hitl.py
+│   └── nodes.py
+│
+├── core/
+│   ├── config.py
+│   └── state.py
+│
+├── ui/
+│   ├── components/
+│        ├── charts_view.py
+│        ├── eda_view.py
+│        ├── hitl.py
+│        ├── insights_view.py
+│        ├── metrics.py
+│        ├── preview.py
+│        ├── sidebar.py
+│        └── stats_view.py
+│    ├── pages/
+│        ├── chat.py
+│        └── dashboard.py
+│
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └──conftest.py
+│
+├── main.py
+├── requirements.txt
+└── README.md
+```
+---
+
+# Installation
+
+---
+
+# 1. Clone Repository
+
+```bash
+git clone <repository_url>
+cd AUTONOMOUS-ANALYTICS
+```
+
+---
+
+# 2. Create Virtual Environment
+
+## Linux / Mac
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+## Windows
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+---
+
+# 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+# 4. Environment Variables
+
+Create:
+
+```text
+.env
+```
+
+Add:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+```
+
+---
+
+# Running the Application
+
+```bash
+streamlit run main.py
+```
+
+---
+
+# Testing
+
+---
+
+# Run All Tests
+
+```bash
+pytest
+```
+
+---
+
+# Run Verbose Tests
+
+```bash
+pytest -v
+```
+
+---
+
+# Run Coverage
+
+```bash
+pytest --cov=.
+```
+
+---
 
 ### 🛠️ Tech Stack
 - Frontend: Streamlit
