@@ -18,6 +18,22 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 
 st.set_page_config(page_title="Autonomous Analytics AI", layout="wide")
 st.title("🚀 Autonomous Data Analytics Platform")
+st.markdown(
+        """
+        ### Enterprise Multi-Agent Analytics System
+ 
+        Features:
+ 
+        - Autonomous AI Agents
+        - LangGraph Orchestration
+        - Statistical Intelligence
+        - Interactive Visualizations
+        - Context-Aware Dataset Chat
+        - Human Approval Workflow
+        - Business Intelligence Insights
+        """
+    )
+ 
 
 graph = build_graph()
 
