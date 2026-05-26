@@ -2,7 +2,7 @@ from core.config import get_llm
 import json
 import re
 from langsmith import traceable
-
+from core.logger import logger
 
 # -----------------------------
 # 🔥 JSON EXTRACTOR
@@ -108,7 +108,10 @@ def run_insights_agent(df, eda_results, stats_results):
     try:
         cleaned = extract_json(response)
         insights = json.loads(cleaned)
-    except:
+        logger.info("Insights generated successfully")
+
+    except Exception as e:
+        logger.error(f"Failed to generate insights: {e}")
         insights = {
             "key_insights": [response],
             "relationships": [],

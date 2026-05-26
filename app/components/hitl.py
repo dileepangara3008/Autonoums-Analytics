@@ -3,6 +3,7 @@ import pandas as pd
 import io
 from tools.cleaning import cleaning_tool
 from core.state import AgentState
+from core.logger import logger
 
 
 def handle_hitl(state, graph):
@@ -42,13 +43,21 @@ def handle_hitl(state, graph):
             if selected_option:
 
                 if selected_option != "skip":
-                    cleaned = cleaning_tool.invoke({
-                        "data": state.dataset.to_json(),
-                        "strategy": selected_option
-                    })
-                    state.cleaned_data = pd.read_json(io.StringIO(cleaned))
-                else:
-                    state.cleaned_data = state.dataset
+
+                    try:
+                        cleaned = cleaning_tool.invoke({
+                            "data": state.dataset.to_json(),
+                            "strategy": selected_option
+                        })
+
+                        state.cleaned_data = pd.read_json(io.StringIO(cleaned))
+                        logger.info("Cleaning successful")
+
+                    except Exception as e:
+                        logger.error(f"Cleaning failed: {e}")
+
+                        st.warning("⚠️ Cleaning failed. Using original dataset.")
+                        state.cleaned_data = state.dataset
 
                 state.waiting_for_input = False
                 state.current_stage = "EDA"

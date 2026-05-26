@@ -11,7 +11,7 @@ from tools.viz_tools import (
 import json
 import re
 from langsmith import traceable
-
+from core.logger import logger
 # -----------------------------
 # 🔐 SAFE COLUMN VALIDATION
 # -----------------------------
@@ -351,8 +351,10 @@ def run_viz_agent(df, eda_results=None, stats_results=None):
 
             if isinstance(res, dict) and "figure" in res:
                 charts.append(res)
+            logger.info("Generated chart: " + str(item))
 
         except Exception as e:
+            logger.error(f"Failed to generate chart: {e}")
             charts.append({"error": str(e)})
 
     return charts

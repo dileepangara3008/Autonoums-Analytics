@@ -23,18 +23,26 @@ def render_eda(state):
 
             df_summary = pd.DataFrame(stats["summary"]).T
 
-            # 🔥 FIX Arrow Serialization Issue
+            # -----------------------------
+            # 🔥 FIX Arrow Serialization Issue (PROPER)
+            # -----------------------------
             df_summary = df_summary.copy()
 
             for col in df_summary.columns:
-                try:
-                    df_summary[col] = pd.to_numeric(df_summary[col])
-                except:
-                    pass
 
+                # try numeric conversion
+                converted = pd.to_numeric(df_summary[col], errors="coerce")
+
+                # if most values are numeric → keep numeric
+                if converted.notna().sum() > 0:
+                    df_summary[col] = converted
+
+                else:
+                    # otherwise convert to string
+                    df_summary[col] = df_summary[col].astype(str)
+
+            # replace NaN with None (safe)
             df_summary = df_summary.where(pd.notnull(df_summary), None)
-
-            st.dataframe(df_summary, use_container_width=True)
 
     if "summary" in eda:
         st.success(eda["summary"])

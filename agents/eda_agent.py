@@ -7,7 +7,7 @@ from tools.eda_tools import (
 )
 import json
 from langsmith import traceable
-
+from core.logger import logger
 
 @traceable(name="EDA Agent")
 def run_eda_agent(df):
@@ -104,7 +104,11 @@ def run_eda_agent(df):
                     })
 
         except Exception as e:
+            logger.error(f"EDA failed: {e}")
             results[tool_name] = f"Error: {str(e)}"
+
+
+    logger.info("EDA completed")
 
     # -----------------------------
     # 🧠 FINAL SUMMARY

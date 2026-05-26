@@ -8,12 +8,15 @@ from tools.stats_tools import (
 )
 import json
 from langsmith import traceable
+from core.logger import logger
+
 
 # -----------------------------
 # 🔐 SAFE COLUMN VALIDATION
 # -----------------------------
 def safe_column(col, df):
     return col if col in df.columns else None
+
 
 @traceable(name="Stats Agent")
 def run_stats_agent(df, eda_results=None):
@@ -24,62 +27,56 @@ def run_stats_agent(df, eda_results=None):
     numeric_cols = df.select_dtypes(include="number").columns.tolist()
 
     # -----------------------------
-    # 🧠 LLM DECIDES TOOLS + COLUMNS
+    # 🧠 LLM DECIDES PLAN
     # -----------------------------
     prompt = f"""
     You are a data analyst.
-
-    You are given a dataset schema and a sample.
-
-    Your task:
-    1. Decide which statistical analyses are relevant
-    2. Select appropriate columns for each analysis
 
     Dataset columns:
     {df.columns.tolist()}
 
     Numeric columns:
-    {df.select_dtypes(include="number").columns.tolist()}
+    {numeric_cols}
 
     Sample data:
     {df.head().to_json()}
 
     Available tools:
-    - correlation (requires 2 numeric columns)
-    - regression (requires 2 numeric columns)
-    - anomaly_detection (requires 1 numeric column)
-    - distribution (requires 1 numeric column)
-    - t_test (requires 2 numeric columns)
+    - correlation (2 numeric columns)
+    - regression (2 numeric columns)
+    - anomaly_detection (1 numeric column)
+    - distribution (1 numeric column)
+    - t_test (2 numeric columns)
 
-    Guidelines:
-    - Use only numeric columns for statistical tests
-    - Avoid columns that look like identifiers (e.g., IDs, indexes)
-    - Prefer columns that represent measurable quantities
-    - Choose meaningful relationships between variables
-    - Do not repeat the same analysis unnecessarily
+    Rules:
+    - Use only numeric columns
+    - Avoid ID-like columns
+    - Avoid duplicate analyses
+    - Choose meaningful relationships
 
-    Return STRICT JSON list like:
+    Return STRICT JSON list:
 
     [
-    {{
+      {{
         "tool": "correlation",
-        "col1": "column_a",
-        "col2": "column_b"
-    }},
-    {{
-        "tool": "distribution",
-        "column": "column_c"
-    }}
+        "col1": "colA",
+        "col2": "colB"
+      }}
     ]
-
-    Do not return anything other than valid JSON.
     """
 
-    decision = llm.invoke(prompt).content.strip()
-
+    # -----------------------------
+    # 🛡️ SAFE PLAN GENERATION
+    # -----------------------------
     try:
+        decision = llm.invoke(prompt).content.strip()
         plan = json.loads(decision)
-    except:
+
+        if not isinstance(plan, list):
+            raise ValueError("Invalid plan format")
+
+    except Exception as e:
+        logger.warning(f"Invalid stats plan: {e}")
         plan = []
 
     results = {}
@@ -102,13 +99,15 @@ def run_stats_agent(df, eda_results=None):
                 col2 = safe_column(item.get("col2"), df)
 
                 if col1 and col2:
-                    results["correlation"] = correlation_test_tool.invoke({
-                        "input_json": json.dumps({
-                            "data": data_json,
-                            "col1": col1,
-                            "col2": col2
+                    results.setdefault("correlation", []).append(
+                        correlation_test_tool.invoke({
+                            "input_json": json.dumps({
+                                "data": data_json,
+                                "col1": col1,
+                                "col2": col2
+                            })
                         })
-                    })
+                    )
 
             # -----------------------------
             # 📈 REGRESSION
@@ -119,13 +118,15 @@ def run_stats_agent(df, eda_results=None):
                 col2 = safe_column(item.get("col2"), df)
 
                 if col1 and col2:
-                    results["regression"] = regression_tool.invoke({
-                        "input_json": json.dumps({
-                            "data": data_json,
-                            "feature": col1,
-                            "target": col2
+                    results.setdefault("regression", []).append(
+                        regression_tool.invoke({
+                            "input_json": json.dumps({
+                                "data": data_json,
+                                "feature": col1,
+                                "target": col2
+                            })
                         })
-                    })
+                    )
 
             # -----------------------------
             # 🚨 ANOMALY
@@ -135,12 +136,14 @@ def run_stats_agent(df, eda_results=None):
                 column = safe_column(item.get("column"), df)
 
                 if column:
-                    results["anomaly"] = anomaly_detection_tool.invoke({
-                        "input_json": json.dumps({
-                            "data": data_json,
-                            "column": column
+                    results.setdefault("anomaly", []).append(
+                        anomaly_detection_tool.invoke({
+                            "input_json": json.dumps({
+                                "data": data_json,
+                                "column": column
+                            })
                         })
-                    })
+                    )
 
             # -----------------------------
             # 📊 DISTRIBUTION
@@ -150,12 +153,14 @@ def run_stats_agent(df, eda_results=None):
                 column = safe_column(item.get("column"), df)
 
                 if column:
-                    results["distribution"] = distribution_tool.invoke({
-                        "input_json": json.dumps({
-                            "data": data_json,
-                            "column": column
+                    results.setdefault("distribution", []).append(
+                        distribution_tool.invoke({
+                            "input_json": json.dumps({
+                                "data": data_json,
+                                "column": column
+                            })
                         })
-                    })
+                    )
 
             # -----------------------------
             # 🧪 T-TEST
@@ -166,19 +171,26 @@ def run_stats_agent(df, eda_results=None):
                 col2 = safe_column(item.get("col2"), df)
 
                 if col1 and col2:
-                    results["t_test"] = t_test_tool.invoke({
-                        "input_json": json.dumps({
-                            "data": data_json,
-                            "col1": col1,
-                            "col2": col2
+                    results.setdefault("t_test", []).append(
+                        t_test_tool.invoke({
+                            "input_json": json.dumps({
+                                "data": data_json,
+                                "col1": col1,
+                                "col2": col2
+                            })
                         })
-                    })
+                    )
 
         except Exception as e:
-            results[tool_name] = f"Error: {str(e)}"
+            logger.error(f"{tool_name} failed: {e}")
 
     # -----------------------------
-    # 🧠 FINAL SUMMARY
+    # ✅ SINGLE LOG (FIXED)
+    # -----------------------------
+    logger.info("Stats analysis completed")
+
+    # -----------------------------
+    # 🧠 SUMMARY
     # -----------------------------
     summary_prompt = f"""
     You are a business analyst.
@@ -189,14 +201,17 @@ def run_stats_agent(df, eda_results=None):
 
     Generate:
     - 3 key insights
-    - 2 relationships between variables
+    - 2 relationships
     - 1 anomaly (if any)
 
     Keep it simple and business-focused.
-    Avoid technical jargon.
     """
 
-    summary = llm.invoke(summary_prompt).content
+    try:
+        summary = llm.invoke(summary_prompt).content.strip()
+    except Exception as e:
+        logger.error(f"Stats summary failed: {e}")
+        summary = "⚠️ Unable to generate summary"
 
     return {
         "plan": plan,
