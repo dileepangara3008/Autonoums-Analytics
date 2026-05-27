@@ -37,8 +37,6 @@ def handle_hitl(state, graph):
             if col2.button("🧮 Fill"):
                 selected_option = "fill"
 
-            if col3.button("⏭ Skip"):
-                selected_option = "skip"
 
             if selected_option:
 

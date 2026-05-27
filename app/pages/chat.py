@@ -11,28 +11,22 @@ def render_chat(state):
     # ======================================================
     if state.chat_history:
 
-        for chat in state.chat_history[-5:]:
+        for i, chat in enumerate(state.chat_history[-5:]):
 
-            # -----------------------------
-            # USER MESSAGE
-            # -----------------------------
-            with st.chat_message("user"):
-                st.write(chat["user"])
-
-            # -----------------------------
-            # ASSISTANT MESSAGE
-            # -----------------------------
             with st.chat_message("assistant"):
 
                 resp = chat["assistant"]
 
-                # 🎯 HANDLE CHART RESPONSE
                 if isinstance(resp, dict) and resp.get("type") == "chart":
 
                     fig = resp.get("figure")
 
                     if fig:
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(
+                            fig,
+                            use_container_width=True,
+                            key=f"chart_{i}_{id(fig)}"
+                        )
 
                     if resp.get("text"):
                         st.write(resp["text"])
@@ -71,7 +65,7 @@ def render_chat(state):
                 fig = result.get("figure")
 
                 if fig:
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, use_container_width=True, key=f"chart_{id(fig)}")
 
                 if result.get("text"):
                     st.write(result["text"])
